@@ -23,3 +23,18 @@ go.work.sum
 
 # env file
 .env
+
+# Go 빌드 파일 무시
+/bin/
+/*.exe
+/*.dll
+/*.so
+/*.dylib
+*.test
+*.out
+
+# vscode 설정 무시
+.vscode/
+
+# Go module 캐시
+vendor/
