@@ -9,33 +9,47 @@ import (
 	"os/exec"
 
 	"github.com/spf13/cobra"
+	lumcfg "github.com/tkdtn2013/lumina/internal/config"
 )
 
 // runCmd represents the run command
 var runCmd = &cobra.Command{
 	Use:   "run [model]",
 	Short: "Run a local LLM model using Ollama",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		modelName := args[0]
+		// 1. 모델명 결정
+		var modelName string
 
-		// 1. ollama 설치 여부 확인
+		if len(args) == 1 {
+			modelName = args[0]
+		} else {
+			cfg, err := lumcfg.LoadConfig()
+			if err != nil || cfg.DefaultModel == "" {
+				fmt.Println("❌ No model specified and no default_model set in config.")
+				os.Exit(1)
+			}
+
+			modelName = cfg.DefaultModel
+			fmt.Printf("📦 Using default model from config: %s\n", modelName)
+		}
+
+		// 2. ollama 설치 여부 확인
 		if _, err := exec.LookPath("ollama"); err != nil {
 			fmt.Fprintln(os.Stderr, "❌ Ollama is not installed or not found in $PATH.")
 			fmt.Fprintln(os.Stderr, "👉 Please install it from: https://ollama.com/download")
 			os.Exit(1)
 		}
 
-		fmt.Printf("🧠 Launching model: %s\n\n", modelName)
+		// 3. 모델 실행
+		fmt.Printf("🚀 Running model '%s' with Ollama...\n", modelName)
+		run := exec.Command("ollama", "run", modelName)
+		run.Stdout = os.Stdout
+		run.Stderr = os.Stderr
+		run.Stdin = os.Stdin
 
-		// 2. ollama run 실행
-		command := exec.Command("ollama", "run", modelName)
-		command.Stdout = os.Stdout
-		command.Stderr = os.Stderr
-		command.Stdin = os.Stdin
-
-		if err := command.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Error running model: %v\n", err)
+		if err := run.Run(); err != nil {
+			fmt.Println("❌ Failed to run model:", err)
 			os.Exit(1)
 		}
 	},
